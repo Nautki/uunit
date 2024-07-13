@@ -25,7 +25,7 @@ export const prefixes = {
     quecto: -30
 }
 
-type UnitConversion = number | [offset: number, scalar: number];
+type UnitConversion = number;
 
 type UnitDescription = {
     /** NOT THE SAME AS SI BASE UNITS */
@@ -48,10 +48,11 @@ type UnitDescription = {
 
     aliases: {
         [unit: string]: {
+            usePrefix?: false,
             equiv: {
                 [index: string]: UnitConversion,
             } & {
-                e10?: number
+                scaling?: number
             }
         }
     }
@@ -120,18 +121,21 @@ export const siUnits = {
 
     aliases: {
         micron: {
+            usePrefix: false,
             equiv: {
                 micrometers: 1,
             }
         },
         fermi: {
+            usePrefix: false,
             equiv: {
                 femtometers: 1,
             }
         },
         metricTon: {
+            usePrefix: false,
             equiv: {
-                megagram: 1
+                megagrams: 1
             }
         },
         hertz: {
@@ -259,7 +263,7 @@ export const siUnits = {
         katals: {
             equiv: {
                 seconds: -1,
-                undefined: 1
+                moles: 1
             }
         }
     }

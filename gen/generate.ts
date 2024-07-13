@@ -7,7 +7,7 @@ let outfiles = {
 
 const dir = __dirname + '/../src';
 fs.emptyDirSync(dir);
-
+/*
 let baseUnits: {
     [unit: string]: {
         name: string,
@@ -16,7 +16,7 @@ let baseUnits: {
         feat?: string[]
     }
 } = {};
-
+*/
 const capitalize = (s: string) => {
     return s[0].toUpperCase() + s.substring(1)
 }
@@ -25,17 +25,18 @@ const snake = (s: string) => {
     return s.replace(/[A-Z]+/gm, (rep) => '_' + rep.toLowerCase()).replace(/^_*/, '')
 }
 
-const uintTypenum = (n: bigint) => {
-    if (n == 0n) {
+/*
+const uintTypenum = (n: number) => {
+    if (n == 0) {
         return 'UTerm'
     }
 
-    let bit = n % 2n;
-    let rest = n >> 1n;
+    let bit = n % 2;
+    let rest = n >> 1;
     return `UInt<${uintTypenum(rest)}, B${bit}>`
-}
+}*/
 
-const typenum = (n: bigint) => {
+const typenum = (n: number) => {
     if (n < 0n) {
         return `N${-n}`
     } else if (n > 0n) {
@@ -54,8 +55,8 @@ const out = (module: string, s: string) => {
 
     outfiles[module] += '\n' + s;
 }
-
-const dim = (_units: { [unit: string]: bigint }) => {
+/*
+const _dim = (_units: { [unit: string]: bigint }) => {
     return `DimensionStruct<${typenum(_units.e10 ?? 1n)}, ${Object.keys(baseUnits).map(u => typenum(_units[u as any] ?? 0n)).join(', ')}>`
 }
 
@@ -80,52 +81,6 @@ for (const item of [siUnits.base, siUnits.extra]) {
     }
 }
 
-const generics = ['TScaling', ...Object.values(baseUnits).map(u => `T${u.name}`)];
-const assoc = ['Scaling', ...Object.values(baseUnits).map(u => u.name)];
-
-const dimTypeGenericsDef = generics.map(u => `${u}: Integer`).join(', ');
-const dimTypeGenerics = generics.join(', ');
-const dimTypeDef = `DimensionStruct<${dimTypeGenericsDef}>`;
-out('lib', `
-#[derive(Clone, Copy)]
-pub struct ${dimTypeDef} {
-${assoc.map(u => `    ${snake(u)}: PhantomData<T${u}>`).join(',\n')}
-}
-impl <${dimTypeGenericsDef}> DimensionStruct<${dimTypeGenerics}> {
-    pub fn new() -> Self {
-        Self {
-${assoc.map(u => `            ${snake(u)}: PhantomData`).join(',\n')}
-        }
-    }
-}
-pub trait Dimension {
-${assoc.map(u => `    type ${u}: Integer;`).join('\n')}
-}
-impl <${dimTypeGenericsDef}> Dimension for DimensionStruct<${dimTypeGenerics}> {
-${assoc.map(u => `    type ${u} = T${u};`).join('\n')}
-}
-`)
-
-const outUnit = (module: string, unit: string, feat: string[] = []) => {
-    let unitIdent = `Unit${capitalize(unit)}`;
-    let name = capitalize(unit);
-
-    let cfg = '';
-    if (feat?.length! > 0) {
-        cfg = `#[cfg(${feat!.map(f => `feature = "${f}"`).join(', ')})]\n`;
-    }
-
-    out(module, `
-${cfg}pub type ${unitIdent} = DimensionStruct<P1, ${dim({ [unit]: 1n })}>;
-${cfg}pub type ${name}<T> = Quantity<T, Unit${name}>;
-    `);
-}
-
-let allUnits: {
-    name: string,
-    prefix?: string,
-    scaling?: number,
-}[] = [];
 
 for (const [unit, data] of Object.entries(baseUnits) as any) {
     out('lib', `
@@ -134,52 +89,201 @@ pub use ${data.module}::*;
     `);
 
     out(data.module, `
-pub type ${data.unitIdent} = ${dim({ [unit]: 1n })};
+pub type ${data.unitIdent} = ${_dim({ [unit]: 1n })};
 pub type ${data.name}<T> = Quantity<T, ${data.unitIdent}>;
     `);
 
-    allUnits.push({ name: capitalize(unit) });
+    units.push({ name: capitalize(unit) });
 
     if (!('usePrefix' in data) || data.usePrefix) {
         for (const [prefix, pow] of Object.entries(prefixes)) {
             const name = capitalize(prefix + unit);
             out(data.module, `
 #[cfg(feature = "si_${prefix}")]
-pub type Unit${name} = ${dim({ e10: BigInt(pow), [unit]: 1n })};
+pub type Unit${name} = ${_dim({ e10: BigInt(pow), [unit]: 1n })};
 #[cfg(feature = "si_${prefix}")]
 pub type ${name}<T> = Quantity<T, Unit${name}>;
             `);
-            allUnits.push({ name, prefix, scaling: pow });
+            units.push({ name, prefix, scaling: pow });
+        }
+    }
+}*/
+
+
+
+type UnitKind = 'base' | 'prefixed' | 'alias';
+type Unit = {
+    module: string,
+    name: string,
+    upperName: string,
+    snakeName: string,
+    features: string[],
+    kind: UnitKind ,
+    prefix?: string,
+    dim: Dim,
+};
+let units: {
+    [lowerCamelName: string]: Unit,
+} & {
+    map: Unit[]['map'],
+    base: Unit[]
+} & Iterable<Unit> = {} as any;
+
+Object.defineProperties(units, {
+    map: {
+        enumerable: false,
+        get: () => {
+            return (...args) => (Object.values(units) as any).map(...args);
+        }
+    },
+    [Symbol.iterator]: {
+        enumerable: false,
+        get: () => {
+            return () => Object.values(units)[Symbol.iterator]();
+        }
+    },
+    base: {
+        enumerable: false,
+        get: () => {
+            return Object.values(units).filter(u => u.kind == 'base')
+        }
+    }
+})
+
+type Dim = {
+    [index: string]: number
+}
+
+const normalizeDim = (dim: Dim) => {
+    let acc: Dim = {
+        scaling: 0
+    };
+
+    for (const [name, outerPow] of Object.entries(dim)) {
+        if (name == 'scaling') {
+            acc[name] += outerPow;
+            continue;
+        }
+
+        const unit = units[name];
+
+        if (!unit) {
+            throw new Error(`Unknown unit ${name}`)
+        }
+
+        for (const [name, innerPow] of Object.entries(unit.dim)) {
+            if (!(name in acc)) {
+                acc[name] = innerPow * outerPow;
+            } else {
+                acc[name] += innerPow * outerPow;
+            }
+        }
+    }
+
+    return acc;
+}
+
+const dim = (dim: Dim) => {
+    return `DimensionStruct<${typenum(dim.scaling ?? 0)}, ${units.base.map(u => typenum(dim[u.name] ?? 0)).join(', ')}>`
+}
+
+const addUnit = (module: string, name: string, kind: UnitKind, dim: Dim, options: Partial<Unit> = {}) => {
+    let unit: Unit = {
+        module,
+        name,
+        upperName: capitalize(name),
+        snakeName: snake(name),
+        features: [],
+        kind,
+        dim: kind == 'base' ? dim : normalizeDim(dim),
+        ...options
+    }
+
+    units[name] = unit;
+
+    return unit;
+}
+
+for (const item of [siUnits.base, siUnits.extra, siUnits.aliases]) {
+    for (const [name, data] of Object.entries(item)) {
+        let module = snake(name);
+        const kind = name in siUnits.aliases ? 'alias' : 'base';
+
+        addUnit(module, name, kind, kind == 'base' ? {
+            [name]: 1
+        } : (data as any).equiv);
+
+        if (!('usePrefix' in data) || data.usePrefix) {
+            for (const [prefix, scaling] of Object.entries(prefixes)) {
+                const prefixedName = prefix + name;
+
+                addUnit(module, prefixedName, 'prefixed', {
+                    scaling,
+                    [name]: 1,
+                });
+            }
         }
     }
 }
-
-out('lib', `
-pub trait DimExt: Copy {
-${allUnits.map(u => `
-${u.prefix ? `    #[cfg(feature = "si_${u.prefix}")]` : ''}
-    fn as_${snake(u.name)}(self) -> ${u.name}<Self> {
-        Quantity::new(self, Unit${u.name}::new())
-    }`).join('\n')}
-}
-`)
 
 const prims = `i8, i16, i32, i64, i128, isize,
 u8, u16, u32, u64, u128, usize,
 f32, f64`.split(',').map(s => s.trim());
 
-prims.forEach(p => out('lib', `impl DimExt for ${p} {}`));
+prims.forEach(p => out('lib', `impl WithUnits for ${p} {
+    type Output<D: Dimension> = Quantity<${p}, D>;
+    
+    fn with_units<D: Dimension>(self) -> Self::Output<D> {
+        Quantity::new(self)
+    }
+}`));
 
 
+const generics = ['Scaling', ...units.base.map(u => `${u.upperName}`)];
+
+const dimTypeGenericsDef = generics.map(u => `${u}: Integer`).join(', ');
+const dimTypeGenerics = generics.join(', ');
+const dimTypeDef = `DimensionStruct<${dimTypeGenericsDef}>`;
 out('lib', `
-impl <T, D: Dimension> Quantity<T, D> {
-${allUnits.map(u => `
-${u.prefix ? `    #[cfg(feature = "si_${u.prefix}")]` : ''}
-    fn as_${snake(u.name)}(self) -> ${u.name}<T> {
-        Quantity::new(self.value, Unit${u.name}::new())
-    }`).join('\n')}
+#[derive(Clone, Copy)]
+pub struct ${dimTypeDef} {
+${generics.map(u => `    ${snake(u)}: PhantomData<${u}>`).join(',\n')}
 }
-`)
+impl <${dimTypeGenericsDef}> DimensionStruct<${dimTypeGenerics}> {
+    pub fn new() -> Self {
+        Self {
+${generics.map(u => `            ${snake(u)}: PhantomData`).join(',\n')}
+        }
+    }
+}
+pub trait Dimension {
+${generics.map(u => `    type ${u}: Integer;`).join('\n')}
+}
+impl <${dimTypeGenericsDef}> Dimension for DimensionStruct<${dimTypeGenerics}> {
+${generics.map(u => `    type ${u} = ${u};`).join('\n')}
+}
+`);
+
+[...new Set(units.map(u => u.module))].map(mod => {
+    out('lib', `
+pub mod ${mod};
+pub use ${mod}::*;
+    `);
+})
+
+for (const unit of units) {
+    console.log(unit);
+
+    let cfg = '';
+    if (unit.features?.length! > 0) {
+        cfg = `#[cfg(${unit.features!.map(f => `feature = "${f}"`).join(', ')})]\n`;
+    }
+
+    out(unit.module, `
+${cfg}pub type Unit${unit.upperName} = ${dim(unit.dim)};
+${cfg}pub type ${unit.upperName}<T> = Quantity<T, Unit${unit.upperName}>;
+    `);
+}
 
 for (const [path, data] of Object.entries(outfiles)) {
     fs.writeFileSync(__dirname + '/../src/' + path.split('::').join('/') + '.rs', data)
