@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@types/node": "^20.14.10"
+  },
+  "dependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "fs-extra": "^11.2.0"
+  }
+}
