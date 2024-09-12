@@ -60,18 +60,18 @@ impl<T: SubAssign<T>, D: Dimension> SubAssign<Quantity<T, D>> for Quantity<T, D>
     }
 }
 
-impl<T: Mul<T, Output = T>, D: Dimension + Mul<D>> Mul<Quantity<T, D>> for Quantity<T, D>
-where <D as Mul<D>>::Output: Dimension {
-    type Output = Quantity<T, <D as Mul<D>>::Output>;
-    fn mul(self, rhs: Quantity<T, D>) -> Self::Output {
+impl<T: Mul<T, Output = T>, A: Dimension + Mul<B>, B: Dimension> Mul<Quantity<T, B>> for Quantity<T, A>
+where <A as Mul<B>>::Output: Dimension {
+    type Output = Quantity<T, <A as Mul<B>>::Output>;
+    fn mul(self, rhs: Quantity<T, B>) -> Self::Output {
         Quantity::new(self.value.mul(rhs.value))
     }
 }
 
-impl<T: Div<T, Output = T>, D: Dimension + Div<D>> Div<Quantity<T, D>> for Quantity<T, D>
-where <D as Div<D>>::Output: Dimension {
-    type Output = Quantity<T, <D as Div<D>>::Output>;
-    fn div(self, rhs: Quantity<T, D>) -> Self::Output {
+impl<T: Div<T, Output = T>, A: Dimension + Div<B>, B: Dimension> Div<Quantity<T, B>> for Quantity<T, A>
+where <A as Div<B>>::Output: Dimension {
+    type Output = Quantity<T, <A as Div<B>>::Output>;
+    fn div(self, rhs: Quantity<T, B>) -> Self::Output {
         Quantity::new(self.value.div(rhs.value))
     }
 }

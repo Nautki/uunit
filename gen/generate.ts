@@ -240,6 +240,10 @@ prims.forEach(p => out('lib', `impl WithUnits for ${p} {
 
 
 const generics = ['Scaling', ...units.base.map(u => `${u.upperName}`)];
+const aGenerics = generics.map(u => `A${u}`);
+const aGenericsDef = generics.map(u => `A${u}: Integer`);
+const bGenerics = generics.map(u => `B${u}`);
+const bGenericsDef = generics.map(u => `B${u}: Integer`);
 
 const dimTypeGenericsDef = generics.map(u => `${u}: Integer`).join(', ');
 const dimTypeGenerics = generics.join(', ');
@@ -263,6 +267,29 @@ impl <${dimTypeGenericsDef}> Dimension for DimensionStruct<${dimTypeGenerics}> {
 ${generics.map(u => `    type ${u} = ${u};`).join('\n')}
 }
 `);
+
+const genDimOp = (op: string, powOp: string) => {
+    out('lib',`  
+impl <${
+    generics.map((g, i) => `${aGenerics[i]}: Integer + ${capitalize(powOp)}<${bGenerics[i]}>`).join(', ')
+}, ${
+    bGenericsDef
+}> ${capitalize(op)}<DimensionStruct<${bGenerics.join(', ')}>> for DimensionStruct<${aGenerics.join(', ')}>
+where ${
+    generics.map((g, i) => `<${aGenerics[i]} as ${capitalize(powOp)}<${bGenerics[i]}>>::Output: Integer`).join(', ')
+} {
+    type Output = DimensionStruct<${
+        generics.map((g, i) => `<${aGenerics[i]} as ${capitalize(powOp)}<${bGenerics[i]}>>::Output`)
+    }>;
+
+    fn ${snake(op)}(self, rhs: DimensionStruct<${bGenerics.join(', ')}>) -> Self::Output {
+        DimensionStruct::new()
+    }
+}`);
+}
+
+genDimOp('mul', 'add');
+genDimOp('div', 'sub');
 
 [...new Set(units.map(u => u.module))].map(mod => {
     out('lib', `
