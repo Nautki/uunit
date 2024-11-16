@@ -120,6 +120,11 @@ export const siUnits = {
     },
 
     aliases: {
+        amps: {
+            equiv: {
+                amperes: 1
+            }
+        },
         micron: {
             usePrefix: false,
             equiv: {

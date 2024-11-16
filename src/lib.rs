@@ -377,6 +377,8 @@ pub mod parsec;
 pub use parsec::*;
 pub mod millimeters_of_mercury;
 pub use millimeters_of_mercury::*;
+pub mod amps;
+pub use amps::*;
 pub mod micron;
 pub use micron::*;
 pub mod fermi;
