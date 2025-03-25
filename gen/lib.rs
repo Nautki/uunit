@@ -6,10 +6,19 @@ pub(crate) use core::ops::*;
 pub(crate) use typenum::*;
 
 #[repr(transparent)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
 pub struct Quantity<T, D: Dimension + ?Sized> {
     pub value: T,
     pub dim: PhantomData<D>,
+}
+/* */
+impl <T: core::fmt::Debug, D: Dimension + ?Sized> core::fmt::Debug for Quantity<T, D> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.value.fmt(f)?;
+        // TODO: write unit string (e.g. so this method writes "32.123 Pascals")
+        Ok(())
+    }
 }
 
 impl<T, D: Dimension + ?Sized> Quantity<T, D> {
@@ -17,7 +26,6 @@ impl<T, D: Dimension + ?Sized> Quantity<T, D> {
         Quantity { value, dim: PhantomData }
     }
 }
-
 /// Re-interprets the unit WITHOUT conversion.
 pub trait WithUnits {
     type Output<D: Dimension>;
