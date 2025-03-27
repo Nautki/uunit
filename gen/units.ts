@@ -96,9 +96,7 @@ export const siUnits = {
         astronomicalUnits: {
             usePrefix: false
         },
-        degrees: {
-            usePrefix: false
-        },
+        degrees: {},
         arcminutes: {
             usePrefix: false
         },
@@ -116,7 +114,8 @@ export const siUnits = {
         parsec: {},
         millimetersOfMercury: {
             usePrefix: false
-        }
+        },
+        Gs: {}
     },
 
     aliases: {

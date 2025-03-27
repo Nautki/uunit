@@ -7,12 +7,13 @@ pub(crate) use typenum::*;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(zerocopy::KnownLayout, zerocopy::Immutable, zerocopy::FromBytes, zerocopy::IntoBytes)]
 #[serde(transparent)]
 pub struct Quantity<T, D: Dimension + ?Sized> {
     pub value: T,
     pub dim: PhantomData<D>,
 }
-/* */
+
 impl <T: core::fmt::Debug, D: Dimension + ?Sized> core::fmt::Debug for Quantity<T, D> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.value.fmt(f)?;
