@@ -22,6 +22,14 @@ impl <T: core::fmt::Debug, D: Dimension + ?Sized> core::fmt::Debug for Quantity<
     }
 }
 
+impl <T: core::fmt::Display, D: Dimension + ?Sized> core::fmt::Display for Quantity<T, D> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        self.value.fmt(f)?;
+        // TODO: write unit string (e.g. so this method writes "32.123 Pascals")
+        Ok(())
+    }
+}
+
 impl<T, D: Dimension + ?Sized> Quantity<T, D> {
     pub fn new(value: T) -> Self {
         Quantity { value, dim: PhantomData }
