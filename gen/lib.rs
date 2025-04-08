@@ -30,11 +30,26 @@ impl <T: core::fmt::Display, D: Dimension + ?Sized> core::fmt::Display for Quant
     }
 }
 
-impl<T, D: Dimension + ?Sized> Quantity<T, D> {
+impl <T, D: Dimension + ?Sized> Quantity<T, D> {
     pub fn new(value: T) -> Self {
         Quantity { value, dim: PhantomData }
     }
 }
+
+impl <T, D: Dimension + ?Sized> Deref for Quantity<T, D> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.value
+    }
+}
+
+impl <T, D: Dimension + ?Sized> DerefMut for Quantity<T, D> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.value
+    }
+}
+
 /// Re-interprets the unit WITHOUT conversion.
 pub trait WithUnits {
     type Output<D: Dimension>;
