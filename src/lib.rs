@@ -6,7 +6,7 @@ pub(crate) use core::ops::*;
 pub(crate) use typenum::*;
 
 #[repr(transparent)]
-#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 #[derive(zerocopy::KnownLayout, zerocopy::Immutable, zerocopy::FromBytes, zerocopy::IntoBytes)]
 #[serde(transparent)]
 pub struct Quantity<T, D: Dimension + ?Sized> {
