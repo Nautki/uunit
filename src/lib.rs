@@ -111,6 +111,13 @@ where <A as Div<B>>::Output: Dimension {
 pub type Multiply<A, B> = <A as Mul<B>>::Output;
 pub type Divide<N, D> = <N as Div<D>>::Output;
 
+pub type MetersPerSecond<T> = Quantity<T, <UnitMeters as Div<UnitSeconds>>::Output>;
+pub type MetersPerSecond2<T> = Quantity<T, <UnitMeters as Div<<UnitMeters as Div<UnitSeconds>>::Output>>::Output>;
+pub type RadiansPerSecond<T> = Quantity<T, <UnitRadians as Div<UnitSeconds>>::Output>;
+pub type RadiansPerSecond2<T> = Quantity<T, <UnitRadians as Div<<UnitRadians as Div<UnitSeconds>>::Output>>::Output>;
+pub type DegreesPerSecond<T> = Quantity<T, <UnitDegrees as Div<UnitSeconds>>::Output>;
+pub type DegreesPerSecond2<T> = Quantity<T, <UnitDegrees as Div<<UnitDegrees as Div<UnitSeconds>>::Output>>::Output>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
