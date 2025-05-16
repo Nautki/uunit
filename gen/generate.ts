@@ -269,24 +269,19 @@ ${generics.map(u => `    type ${u} = ${u};`).join('\n')}
 `);
 
 out('lib', `
-pub trait ConvertUnits<T, D: Dimension + ?Sized> {
-    fn convert(self) -> Quantity<T, D>;
-}
-
 // Sadly this would conflict with \`From\` impl
 impl <
     ${units.base.map(u => u.upperName).join(',')},
     A,
     AD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized,
-    B,
-    BD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized
-> ConvertUnits<B, BD> for Quantity<A, AD>
-where
-    B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
-    BD::Scaling: Sub::<AD::Scaling>,
-    <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
+> Quantity<A, AD>
 {
-    fn convert(self) -> Quantity<B, BD> {
+    pub fn convert<B, BD>(self) -> Quantity<B, BD> where
+        B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
+        BD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized,
+        BD::Scaling: Sub::<AD::Scaling>,
+        <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
+    {
         let mut value: B = self.value.into();
         let pow = -<<BD::Scaling as Sub::<AD::Scaling>>::Output as Integer>::ISIZE;
 

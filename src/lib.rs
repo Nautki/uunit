@@ -355,24 +355,19 @@ impl <Scaling: Integer, Seconds: Integer, Meters: Integer, Grams: Integer, Amper
     type MillimetersOfMercury = MillimetersOfMercury;
     type Gs = Gs;
 }
-pub trait ConvertUnits<T, D: Dimension + ?Sized> {
-    fn convert(self) -> Quantity<T, D>;
-}
-
 // Sadly this would conflict with `From` impl
 impl <
     Seconds,Meters,Grams,Amperes,Kelvin,Moles,Candelas,Byte,Radians,Steradians,Celsius,Minutes,Hours,Days,AstronomicalUnits,Degrees,Arcminutes,Arcseconds,Ares,Liters,Daltons,Electronvolts,Nepers,Bels,Atmospheres,Bars,Parsec,MillimetersOfMercury,Gs,
     A,
     AD: Dimension<Seconds = Seconds,Meters = Meters,Grams = Grams,Amperes = Amperes,Kelvin = Kelvin,Moles = Moles,Candelas = Candelas,Byte = Byte,Radians = Radians,Steradians = Steradians,Celsius = Celsius,Minutes = Minutes,Hours = Hours,Days = Days,AstronomicalUnits = AstronomicalUnits,Degrees = Degrees,Arcminutes = Arcminutes,Arcseconds = Arcseconds,Ares = Ares,Liters = Liters,Daltons = Daltons,Electronvolts = Electronvolts,Nepers = Nepers,Bels = Bels,Atmospheres = Atmospheres,Bars = Bars,Parsec = Parsec,MillimetersOfMercury = MillimetersOfMercury,Gs = Gs> + ?Sized,
-    B,
-    BD: Dimension<Seconds = Seconds,Meters = Meters,Grams = Grams,Amperes = Amperes,Kelvin = Kelvin,Moles = Moles,Candelas = Candelas,Byte = Byte,Radians = Radians,Steradians = Steradians,Celsius = Celsius,Minutes = Minutes,Hours = Hours,Days = Days,AstronomicalUnits = AstronomicalUnits,Degrees = Degrees,Arcminutes = Arcminutes,Arcseconds = Arcseconds,Ares = Ares,Liters = Liters,Daltons = Daltons,Electronvolts = Electronvolts,Nepers = Nepers,Bels = Bels,Atmospheres = Atmospheres,Bars = Bars,Parsec = Parsec,MillimetersOfMercury = MillimetersOfMercury,Gs = Gs> + ?Sized
-> ConvertUnits<B, BD> for Quantity<A, AD>
-where
-    B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
-    BD::Scaling: Sub::<AD::Scaling>,
-    <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
+> Quantity<A, AD>
 {
-    fn convert(self) -> Quantity<B, BD> {
+    pub fn convert<B, BD>(self) -> Quantity<B, BD> where
+        B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
+        BD: Dimension<Seconds = Seconds,Meters = Meters,Grams = Grams,Amperes = Amperes,Kelvin = Kelvin,Moles = Moles,Candelas = Candelas,Byte = Byte,Radians = Radians,Steradians = Steradians,Celsius = Celsius,Minutes = Minutes,Hours = Hours,Days = Days,AstronomicalUnits = AstronomicalUnits,Degrees = Degrees,Arcminutes = Arcminutes,Arcseconds = Arcseconds,Ares = Ares,Liters = Liters,Daltons = Daltons,Electronvolts = Electronvolts,Nepers = Nepers,Bels = Bels,Atmospheres = Atmospheres,Bars = Bars,Parsec = Parsec,MillimetersOfMercury = MillimetersOfMercury,Gs = Gs> + ?Sized,
+        BD::Scaling: Sub::<AD::Scaling>,
+        <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
+    {
         let mut value: B = self.value.into();
         let pow = -<<BD::Scaling as Sub::<AD::Scaling>>::Output as Integer>::ISIZE;
 
