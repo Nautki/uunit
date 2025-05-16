@@ -268,6 +268,44 @@ ${generics.map(u => `    type ${u} = ${u};`).join('\n')}
 }
 `);
 
+out('lib', `
+pub trait ConvertUnits<T, D: Dimension + ?Sized> {
+    fn convert(self) -> Quantity<T, D>;
+}
+
+// Sadly this would conflict with \`From\` impl
+impl <
+    ${units.base.map(u => u.upperName).join(',')},
+    A,
+    AD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized,
+    B,
+    BD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized
+> ConvertUnits<B, BD> for Quantity<A, AD>
+where
+    B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
+    BD::Scaling: Sub::<AD::Scaling>,
+    <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
+{
+    fn convert(self) -> Quantity<B, BD> {
+        let mut value: B = self.value.into();
+        let pow = -<<BD::Scaling as Sub::<AD::Scaling>>::Output as Integer>::ISIZE;
+
+        let ten: B = 10.into();
+        if pow < 0 {
+            for _ in 0..-pow {
+                value = value / ten.clone();
+            }
+        } else {
+            for _ in 0..pow {
+                value = value * ten.clone();
+            }
+        }
+
+        Quantity::new(value)
+    }
+}
+`);
+
 const genDimOp = (op: string, powOp: string) => {
     out('lib',`  
 impl <${

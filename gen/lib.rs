@@ -110,3 +110,16 @@ where <A as Div<B>>::Output: Dimension {
 
 pub type Multiply<A, B> = <A as Mul<B>>::Output;
 pub type Divide<N, D> = <N as Div<D>>::Output;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_conversions() {
+        let value: Millimeters<u32> = 10u32.with_units();
+        let converted: Meters<f64> = value.convert();
+
+        assert_eq!(value.value as f64 / 1000.0, converted.value);
+    }
+}

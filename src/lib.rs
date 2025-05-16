@@ -110,6 +110,20 @@ where <A as Div<B>>::Output: Dimension {
 
 pub type Multiply<A, B> = <A as Mul<B>>::Output;
 pub type Divide<N, D> = <N as Div<D>>::Output;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unit_conversions() {
+        let value: Millimeters<u32> = 10u32.with_units();
+        let converted: Meters<f64> = value.convert();
+
+        assert_eq!(value.value as f64 / 1000.0, converted.value);
+    }
+}
+
 impl WithUnits for i8 {
     type Output<D: Dimension> = Quantity<i8, D>;
     
@@ -340,6 +354,41 @@ impl <Scaling: Integer, Seconds: Integer, Meters: Integer, Grams: Integer, Amper
     type Parsec = Parsec;
     type MillimetersOfMercury = MillimetersOfMercury;
     type Gs = Gs;
+}
+pub trait ConvertUnits<T, D: Dimension + ?Sized> {
+    fn convert(self) -> Quantity<T, D>;
+}
+
+// Sadly this would conflict with `From` impl
+impl <
+    Seconds,Meters,Grams,Amperes,Kelvin,Moles,Candelas,Byte,Radians,Steradians,Celsius,Minutes,Hours,Days,AstronomicalUnits,Degrees,Arcminutes,Arcseconds,Ares,Liters,Daltons,Electronvolts,Nepers,Bels,Atmospheres,Bars,Parsec,MillimetersOfMercury,Gs,
+    A,
+    AD: Dimension<Seconds = Seconds,Meters = Meters,Grams = Grams,Amperes = Amperes,Kelvin = Kelvin,Moles = Moles,Candelas = Candelas,Byte = Byte,Radians = Radians,Steradians = Steradians,Celsius = Celsius,Minutes = Minutes,Hours = Hours,Days = Days,AstronomicalUnits = AstronomicalUnits,Degrees = Degrees,Arcminutes = Arcminutes,Arcseconds = Arcseconds,Ares = Ares,Liters = Liters,Daltons = Daltons,Electronvolts = Electronvolts,Nepers = Nepers,Bels = Bels,Atmospheres = Atmospheres,Bars = Bars,Parsec = Parsec,MillimetersOfMercury = MillimetersOfMercury,Gs = Gs> + ?Sized,
+    B,
+    BD: Dimension<Seconds = Seconds,Meters = Meters,Grams = Grams,Amperes = Amperes,Kelvin = Kelvin,Moles = Moles,Candelas = Candelas,Byte = Byte,Radians = Radians,Steradians = Steradians,Celsius = Celsius,Minutes = Minutes,Hours = Hours,Days = Days,AstronomicalUnits = AstronomicalUnits,Degrees = Degrees,Arcminutes = Arcminutes,Arcseconds = Arcseconds,Ares = Ares,Liters = Liters,Daltons = Daltons,Electronvolts = Electronvolts,Nepers = Nepers,Bels = Bels,Atmospheres = Atmospheres,Bars = Bars,Parsec = Parsec,MillimetersOfMercury = MillimetersOfMercury,Gs = Gs> + ?Sized
+> ConvertUnits<B, BD> for Quantity<A, AD>
+where
+    B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
+    BD::Scaling: Sub::<AD::Scaling>,
+    <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
+{
+    fn convert(self) -> Quantity<B, BD> {
+        let mut value: B = self.value.into();
+        let pow = -<<BD::Scaling as Sub::<AD::Scaling>>::Output as Integer>::ISIZE;
+
+        let ten: B = 10.into();
+        if pow < 0 {
+            for _ in 0..-pow {
+                value = value / ten.clone();
+            }
+        } else {
+            for _ in 0..pow {
+                value = value * ten.clone();
+            }
+        }
+
+        Quantity::new(value)
+    }
 }
 impl <AScaling: Integer + Add<BScaling>, ASeconds: Integer + Add<BSeconds>, AMeters: Integer + Add<BMeters>, AGrams: Integer + Add<BGrams>, AAmperes: Integer + Add<BAmperes>, AKelvin: Integer + Add<BKelvin>, AMoles: Integer + Add<BMoles>, ACandelas: Integer + Add<BCandelas>, AByte: Integer + Add<BByte>, ARadians: Integer + Add<BRadians>, ASteradians: Integer + Add<BSteradians>, ACelsius: Integer + Add<BCelsius>, AMinutes: Integer + Add<BMinutes>, AHours: Integer + Add<BHours>, ADays: Integer + Add<BDays>, AAstronomicalUnits: Integer + Add<BAstronomicalUnits>, ADegrees: Integer + Add<BDegrees>, AArcminutes: Integer + Add<BArcminutes>, AArcseconds: Integer + Add<BArcseconds>, AAres: Integer + Add<BAres>, ALiters: Integer + Add<BLiters>, ADaltons: Integer + Add<BDaltons>, AElectronvolts: Integer + Add<BElectronvolts>, ANepers: Integer + Add<BNepers>, ABels: Integer + Add<BBels>, AAtmospheres: Integer + Add<BAtmospheres>, ABars: Integer + Add<BBars>, AParsec: Integer + Add<BParsec>, AMillimetersOfMercury: Integer + Add<BMillimetersOfMercury>, AGs: Integer + Add<BGs>, BScaling: Integer,BSeconds: Integer,BMeters: Integer,BGrams: Integer,BAmperes: Integer,BKelvin: Integer,BMoles: Integer,BCandelas: Integer,BByte: Integer,BRadians: Integer,BSteradians: Integer,BCelsius: Integer,BMinutes: Integer,BHours: Integer,BDays: Integer,BAstronomicalUnits: Integer,BDegrees: Integer,BArcminutes: Integer,BArcseconds: Integer,BAres: Integer,BLiters: Integer,BDaltons: Integer,BElectronvolts: Integer,BNepers: Integer,BBels: Integer,BAtmospheres: Integer,BBars: Integer,BParsec: Integer,BMillimetersOfMercury: Integer,BGs: Integer> Mul<DimensionStruct<BScaling, BSeconds, BMeters, BGrams, BAmperes, BKelvin, BMoles, BCandelas, BByte, BRadians, BSteradians, BCelsius, BMinutes, BHours, BDays, BAstronomicalUnits, BDegrees, BArcminutes, BArcseconds, BAres, BLiters, BDaltons, BElectronvolts, BNepers, BBels, BAtmospheres, BBars, BParsec, BMillimetersOfMercury, BGs>> for DimensionStruct<AScaling, ASeconds, AMeters, AGrams, AAmperes, AKelvin, AMoles, ACandelas, AByte, ARadians, ASteradians, ACelsius, AMinutes, AHours, ADays, AAstronomicalUnits, ADegrees, AArcminutes, AArcseconds, AAres, ALiters, ADaltons, AElectronvolts, ANepers, ABels, AAtmospheres, ABars, AParsec, AMillimetersOfMercury, AGs>
 where <AScaling as Add<BScaling>>::Output: Integer, <ASeconds as Add<BSeconds>>::Output: Integer, <AMeters as Add<BMeters>>::Output: Integer, <AGrams as Add<BGrams>>::Output: Integer, <AAmperes as Add<BAmperes>>::Output: Integer, <AKelvin as Add<BKelvin>>::Output: Integer, <AMoles as Add<BMoles>>::Output: Integer, <ACandelas as Add<BCandelas>>::Output: Integer, <AByte as Add<BByte>>::Output: Integer, <ARadians as Add<BRadians>>::Output: Integer, <ASteradians as Add<BSteradians>>::Output: Integer, <ACelsius as Add<BCelsius>>::Output: Integer, <AMinutes as Add<BMinutes>>::Output: Integer, <AHours as Add<BHours>>::Output: Integer, <ADays as Add<BDays>>::Output: Integer, <AAstronomicalUnits as Add<BAstronomicalUnits>>::Output: Integer, <ADegrees as Add<BDegrees>>::Output: Integer, <AArcminutes as Add<BArcminutes>>::Output: Integer, <AArcseconds as Add<BArcseconds>>::Output: Integer, <AAres as Add<BAres>>::Output: Integer, <ALiters as Add<BLiters>>::Output: Integer, <ADaltons as Add<BDaltons>>::Output: Integer, <AElectronvolts as Add<BElectronvolts>>::Output: Integer, <ANepers as Add<BNepers>>::Output: Integer, <ABels as Add<BBels>>::Output: Integer, <AAtmospheres as Add<BAtmospheres>>::Output: Integer, <ABars as Add<BBars>>::Output: Integer, <AParsec as Add<BParsec>>::Output: Integer, <AMillimetersOfMercury as Add<BMillimetersOfMercury>>::Output: Integer, <AGs as Add<BGs>>::Output: Integer {
