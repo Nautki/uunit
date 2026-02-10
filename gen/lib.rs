@@ -1,4 +1,5 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
+
 #![allow(unused)]
 
 pub(crate) use core::marker::PhantomData;
@@ -17,7 +18,8 @@ pub struct Quantity<T, D: Dimension + ?Sized> {
 impl <T: core::fmt::Debug, D: Dimension + ?Sized> core::fmt::Debug for Quantity<T, D> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.value.fmt(f)?;
-        // TODO: write unit string (e.g. so this method writes "32.123 Pascals")
+        f.write_str(" ")?;
+        core::fmt::Debug::fmt(&D::default(), f)?;
         Ok(())
     }
 }
@@ -25,7 +27,8 @@ impl <T: core::fmt::Debug, D: Dimension + ?Sized> core::fmt::Debug for Quantity<
 impl <T: core::fmt::Display, D: Dimension + ?Sized> core::fmt::Display for Quantity<T, D> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.value.fmt(f)?;
-        // TODO: write unit string (e.g. so this method writes "32.123 Pascals")
+        f.write_str(" ")?;
+        core::fmt::Display::fmt(&D::default(), f)?;
         Ok(())
     }
 }
@@ -50,19 +53,17 @@ impl <T, D: Dimension + ?Sized> DerefMut for Quantity<T, D> {
     }
 }
 
-/// Re-interprets the unit WITHOUT conversion.
-pub trait WithUnits {
-    type Output<D: Dimension>;
-
-    /// Re-interprets the units WITHOUT conversion.
-    fn with_units<D: Dimension>(self) -> Self::Output<D>;
+pub trait FromUnits<T> {
+    fn from_units(value: &T) -> Self;
 }
 
-impl <T, I: Dimension + ?Sized> WithUnits for Quantity<T, I> {
-    type Output<U: Dimension> = Quantity<T, U>;
+pub trait IntoUnits<U> {
+    fn into_units(&self) -> U;
+}
 
-    fn with_units<D: Dimension>(self) -> Quantity<T, D> {
-        Quantity::new(self.value)
+impl <T, U: FromUnits<T>> IntoUnits<U> for T {
+    fn into_units(&self) -> U {
+        <U as FromUnits<T>>::from_units(self)
     }
 }
 
@@ -111,22 +112,70 @@ where <A as Div<B>>::Output: Dimension {
 pub type Multiply<A, B> = <A as Mul<B>>::Output;
 pub type Divide<N, D> = <N as Div<D>>::Output;
 
-pub type MetersPerSecond<T> = Quantity<T, <UnitMeters as Div<UnitSeconds>>::Output>;
-pub type MetersPerSecond2<T> = Quantity<T, <UnitMeters as Div<<UnitMeters as Div<UnitSeconds>>::Output>>::Output>;
-pub type RadiansPerSecond<T> = Quantity<T, <UnitRadians as Div<UnitSeconds>>::Output>;
-pub type RadiansPerSecond2<T> = Quantity<T, <UnitRadians as Div<<UnitRadians as Div<UnitSeconds>>::Output>>::Output>;
-pub type DegreesPerSecond<T> = Quantity<T, <UnitDegrees as Div<UnitSeconds>>::Output>;
-pub type DegreesPerSecond2<T> = Quantity<T, <UnitDegrees as Div<<UnitDegrees as Div<UnitSeconds>>::Output>>::Output>;
+pub type MetersPerSecond<T> = Quantity<T, Divide<UnitMeters, UnitSeconds>>;
+pub type MetersPerSecond2<T> = Quantity<T, Divide<Divide<UnitMeters, UnitSeconds>, UnitSeconds>>;
+pub type RadiansPerSecond<T> = Quantity<T, Divide<UnitRadians, UnitSeconds>>;
+pub type RadiansPerSecond2<T> = Quantity<T, Divide<Divide<UnitRadians, UnitSeconds>, UnitSeconds>>;
+pub type DegreesPerSecond<T> = Quantity<T, Divide<UnitDegrees, UnitSeconds>>;
+pub type DegreesPerSecond2<T> = Quantity<T, Divide<Divide<UnitDegrees, UnitSeconds>, UnitSeconds>>;
+
+pub fn write_typenum_superscript<T: Integer>(f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    let mut v = T::to_i32();
+
+    if v < 0 {
+        f.write_str("⁻")?;
+        v *= -1;
+    }
+
+    while v != 0 {
+        f.write_str(match v % 10 {
+            0 => "⁰",
+            1 => "¹",
+            2 => "²",
+            3 => "³",
+            4 => "⁴",
+            5 => "⁵",
+            6 => "⁶",
+            7 => "⁷",
+            8 => "⁸",
+            9 => "⁹",
+            _ => unreachable!()
+        })?;
+
+        v = v / 10;
+    }
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fmt::Write;
 
     #[test]
     fn unit_conversions() {
-        let value: Millimeters<u32> = 10u32.with_units();
-        let converted: Meters<f64> = value.convert();
+        let value: Millimeters<u32> = 10u32.into_units();
+        let converted: Meters<f64> = value.into_units();
 
         assert_eq!(value.value as f64 / 1000.0, converted.value);
+    }
+
+    #[test]
+    fn print_mm() {
+        let value: Millimeters<u32> = 10u32.into_units();
+
+        let mut output = String::new();
+        write!(output, "{}", value);
+        assert_eq!(output, "10 × 10⁻³m")
+    }
+
+    #[test]
+    fn print_ms2() {
+        let value: MetersPerSecond2<i32> = (-5i32).into_units();
+
+        let mut output = String::new();
+        write!(output, "{}", value);
+        assert_eq!(output, "-5 m·s⁻²")
     }
 }

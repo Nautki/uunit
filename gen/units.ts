@@ -25,6 +25,36 @@ export const prefixes = {
     quecto: -30
 }
 
+export const prefixesShortStr = {
+    quetta: 'Q',
+    ronna: 'R',
+    yotta: 'Y',
+    zetta: 'Z',
+    exa: 'E',
+    peta: 'P',
+    tera: 'T',
+    giga: 'G',
+    mega: 'M',
+    kilo: 'K',
+    hecto: 'h',
+    deca: 'da',
+    deci: 'd',
+    centi: 'c',
+    milli: 'm',
+    micro: 'μ',
+    nano: 'n',
+    pico: 'p',
+    femto: 'f',
+    atto: 'a',
+    zepto: 'z',
+    yocto: 'y',
+    ronto: 'r',
+    quecto: 'q'
+}
+
+export const superscripts = "⁰¹²³⁴⁵⁶⁷⁸⁹";
+export const superminus = "⁻";
+
 type UnitConversion = number;
 
 type UnitDescription = {
@@ -37,6 +67,7 @@ type UnitDescription = {
              */
             equiv?: Record<string, UnitConversion>,
             conversions?: Record<string, UnitConversion>,
+            short?: string
         }
     }
 
@@ -61,16 +92,32 @@ type UnitDescription = {
 export const siUnits = {
     base: {
         // SI base (except kilogram)
-        seconds: {},
-        meters: {},
-        grams: {},
-        amperes: {},
-        kelvin: {},
-        moles: {},
-        candelas: {},
+        meters: {
+            short: 'm',
+        },
+        seconds: {
+            short: 's',
+        },
+        grams: {
+            short: 'g',
+        },
+        amperes: {
+            short: 'A'
+        },
+        kelvin: {
+            short: 'K'
+        },
+        moles: {
+            short: 'mol'
+        },
+        candelas: {
+            short: 'ca'
+        },
 
         // not actually si base unit but w/e
-        byte: {},
+        byte: {
+            short: 'b'
+        },
     },
 
     extra: {

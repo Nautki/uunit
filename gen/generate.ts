@@ -109,8 +109,6 @@ pub type ${name}<T> = Quantity<T, Unit${name}>;
     }
 }*/
 
-
-
 type UnitKind = 'base' | 'prefixed' | 'alias';
 type Unit = {
     module: string,
@@ -118,6 +116,7 @@ type Unit = {
     upperName: string,
     snakeName: string,
     features: string[],
+    short?: string,
     kind: UnitKind ,
     prefix?: string,
     dim: Dim,
@@ -210,8 +209,10 @@ for (const item of [siUnits.base, siUnits.extra, siUnits.aliases]) {
         const kind = name in siUnits.aliases ? 'alias' : 'base';
 
         addUnit(module, name, kind, kind == 'base' ? {
-            [name]: 1
-        } : (data as any).equiv);
+            [name]: 1,
+        } : (data as any).equiv, {
+            short: (data as any).short
+        });
 
         if (!('usePrefix' in data) || data.usePrefix) {
             for (const [prefix, scaling] of Object.entries(prefixes)) {
@@ -230,11 +231,9 @@ const prims = `i8, i16, i32, i64, i128, isize,
 u8, u16, u32, u64, u128, usize,
 f32, f64`.split(',').map(s => s.trim());
 
-prims.forEach(p => out('lib', `impl WithUnits for ${p} {
-    type Output<D: Dimension> = Quantity<${p}, D>;
-    
-    fn with_units<D: Dimension>(self) -> Self::Output<D> {
-        Quantity::new(self)
+prims.forEach(p => out('lib', `impl <D: Dimension> IntoUnits<Quantity<${p}, D>> for ${p} {    
+    fn into_units(&self) -> Quantity<${p}, D> {
+        Quantity::new(*self)
     }
 }`));
 
@@ -249,7 +248,7 @@ const dimTypeGenericsDef = generics.map(u => `${u}: Integer`).join(', ');
 const dimTypeGenerics = generics.join(', ');
 const dimTypeDef = `DimensionStruct<${dimTypeGenericsDef}>`;
 out('lib', `
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 pub struct ${dimTypeDef} {
 ${generics.map(u => `    ${snake(u)}: PhantomData<${u}>`).join(',\n')}
 }
@@ -260,29 +259,62 @@ ${generics.map(u => `            ${snake(u)}: PhantomData`).join(',\n')}
         }
     }
 }
-pub trait Dimension {
+pub trait Dimension: Default + core::fmt::Debug + core::fmt::Display {
 ${generics.map(u => `    type ${u}: Integer;`).join('\n')}
 }
 impl <${dimTypeGenericsDef}> Dimension for DimensionStruct<${dimTypeGenerics}> {
 ${generics.map(u => `    type ${u} = ${u};`).join('\n')}
 }
+impl <${dimTypeGenericsDef}> core::fmt::Display for DimensionStruct<${dimTypeGenerics}> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let scaling = Scaling::to_i32();
+        if scaling != 0 {
+            f.write_str("× 10");
+            if scaling != 1 {
+                write_typenum_superscript::<Scaling>(f)?;
+            }
+        }
+
+        let mut is_first = true;
+${units.base.map(u => `
+        let val = ${u.upperName}::to_i32();
+        if val != 0 {
+            if !is_first {
+                f.write_str("·")?;
+            }
+            f.write_str("${u.short || u.name}")?;
+            if val != 1 {
+                write_typenum_superscript::<${u.upperName}>(f)?;
+            }
+            is_first = false;
+        }`).join("\n        ")}
+        Ok(())
+    }
+}
+impl <${dimTypeGenericsDef}> core::fmt::Debug for DimensionStruct<${dimTypeGenerics}> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        <Self as core::fmt::Display>::fmt(self, f)
+    }
+}
 `);
 
 out('lib', `
-// Sadly this would conflict with \`From\` impl
 impl <
     ${units.base.map(u => u.upperName).join(',')},
     A,
+    AD,
+    B,
+    BD
+> FromUnits<Quantity<A, AD>> for Quantity<B, BD> where
     AD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized,
-> Quantity<A, AD>
+    A: Clone,
+    B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
+    BD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized,
+    BD::Scaling: Sub::<AD::Scaling>,
+    <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer
 {
-    pub fn convert<B, BD>(self) -> Quantity<B, BD> where
-        B: From<A> + From<u8> + Mul<B, Output = B> + Div<B, Output = B> + Clone,
-        BD: Dimension<${units.base.map(u => `${u.upperName} = ${u.upperName}`).join(',')}> + ?Sized,
-        BD::Scaling: Sub::<AD::Scaling>,
-        <BD::Scaling as Sub::<AD::Scaling>>::Output: Integer,
-    {
-        let mut value: B = self.value.into();
+    fn from_units(quantity: &Quantity<A, AD>) -> Self {
+        let mut value: B = quantity.value.clone().into();
         let pow = -<<BD::Scaling as Sub::<AD::Scaling>>::Output as Integer>::ISIZE;
 
         let ten: B = 10.into();
@@ -332,8 +364,6 @@ pub use ${mod}::*;
 })
 
 for (const unit of units) {
-    console.log(unit);
-
     let cfg = '';
     if (unit.features?.length! > 0) {
         cfg = `#[cfg(${unit.features!.map(f => `feature = "${f}"`).join(', ')})]\n`;
