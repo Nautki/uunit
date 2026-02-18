@@ -5,10 +5,12 @@
 pub(crate) use core::marker::PhantomData;
 pub(crate) use core::ops::*;
 pub(crate) use typenum::*;
+use bitsong::*;
 
 #[repr(transparent)]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 #[derive(zerocopy::KnownLayout, zerocopy::Immutable, zerocopy::FromBytes, zerocopy::IntoBytes)]
+#[derive(SongSize, ToSong, FromSong)]
 #[serde(transparent)]
 pub struct Quantity<T, D: Dimension + ?Sized> {
     pub value: T,

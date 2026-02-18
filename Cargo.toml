@@ -7,6 +7,7 @@ description = "SI & Customary Units"
 repository = "https://github.com/Nautki/uunit"
 
 [dependencies]
+bitsong = { version = "0.1.3", path = "../bitsong/bitsong" }
 serde = { version = "1.0.219", default-features = false, features = ["derive"] }
 typenum = "1.17.0"
 zerocopy = { version = "0.8.24", features = ["derive"] }
